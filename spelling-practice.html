@@ -1,116 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Spelling Practice</title>
-<style>
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: #f7f9fc;
-    color: #333;
-    margin: 0;
-    padding: 20px;
-}
-.container {
-    max-width: 420px;
-    margin: auto;
-    background: #fff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-}
-h1 {
-    text-align: center;
-    font-size: 22px;
-    margin-bottom: 20px;
-}
-input, select {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-}
-button {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    border: none;
-    border-radius: 8px;
-    margin-top: 8px;
-    background: #4f8cff;
-    color: #fff;
-    cursor: pointer;
-}
-button.secondary { background: #e0e6f0; color: #333; }
-button.small { background: #ccc; color: #333; margin-top: 6px; }
-.feedback { text-align: center; font-size: 18px; margin-top: 10px; font-weight: 600; }
-.correct { color: green; }
-.incorrect { color: red; }
-.answer { text-align: center; margin-top: 8px; }
-.hidden { display: none; }
-.word-list { margin-top: 15px; padding: 10px; background: #f1f4fa; border-radius: 8px; font-size: 15px; line-height: 1.6; }
-.progress-container { margin-bottom: 10px; }
-.progress-bar-bg { width: 100%; height: 10px; background: #e6e6e6; border-radius: 5px; overflow: hidden; }
-.progress-bar-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.4s ease; }
-.progress-text { font-size: 13px; text-align: center; margin-top: 4px; color: #555; }
-</style>
-</head>
-<body>
-
-<div class="container">
-
-    <!-- Company Name -->
-    <h1 style="text-align:center; font-size:24px; margin-bottom:10px;">
-        <span style="color:#0b3d91; font-weight:bold;">PTE</span>
-        <span style="color:#d4af37; font-weight:bold;">Guide.com</span>
-    </h1>
-
-    <!-- App Title -->
-    <h1 style="text-align:center; font-size:22px; margin-bottom:20px;">Spelling Practice</h1>
-
-    <!-- Profile Selection -->
-    <select id="profileSelect" onchange="switchProfile()">
-        <option value="">Select Profile</option>
-        <option value="Zwala">Zwala</option>
-        <option value="Ganga">Ganga</option>
-        <option value="Poonam">Poonam</option>
-    </select>
-
-    <!-- Add Word -->
-    <input type="text" id="newWord" placeholder="Add a new word">
-    <button onclick="addWord()">Add Word</button>
-
-    <hr style="margin:20px 0;">
-
-    <!-- Practice -->
-    <button class="secondary" onclick="startPractice()">Start Practice</button>
-    <button class="secondary" onclick="toggleWordList()">View Listed Words</button>
-
-    <div id="practiceArea" class="hidden">
-
-        <!-- Progress -->
-        <div class="progress-container">
-            <div class="progress-bar-bg">
-                <div id="progressFill" class="progress-bar-fill"></div>
-            </div>
-            <div id="progressText" class="progress-text">0 / 0</div>
-        </div>
-
-        <input type="text" id="userInput" placeholder="Type the spelling">
-        <button onclick="checkSpelling()">Submit</button>
-
-        <div id="feedback" class="feedback"></div>
-        <button id="showBtn" class="small hidden" onclick="showAnswer()">Show</button>
-        <div id="answer" class="answer"></div>
-        <button class="secondary" onclick="nextWord()">Next</button>
-    </div>
-
-    <div id="wordListBox" class="word-list hidden"></div>
-</div>
-
 <script>
 let profiles = ["Zwala", "Ganga", "Poonam"];
 let currentProfile = "";
@@ -155,6 +42,8 @@ function switchProfile() {
         document.getElementById("wordListBox").classList.add("hidden");
         updateProgress();
         alert(`✅ Access granted for ${currentProfile}`);
+        // Save last profile to localStorage
+        localStorage.setItem("lastProfile", currentProfile);
     } else {
         alert("❌ Incorrect PIN! Access denied.");
         document.getElementById("profileSelect").value = ""; // reset selection
@@ -276,7 +165,22 @@ function updateWordListDisplay() {
         ? "<strong>Listed Words for " + currentProfile + ":</strong><br>" + words.join(", ")
         : "No words added yet.";
 }
-</script>
 
-</body>
-</html>
+// --- Auto-load last profile on page refresh ---
+window.onload = function() {
+    const lastProfile = localStorage.getItem("lastProfile");
+    if (lastProfile && profiles.includes(lastProfile)) {
+        const enteredPIN = prompt(`Enter PIN for ${lastProfile} to access your profile:`);
+        if (enteredPIN === profilePINs[lastProfile]) {
+            currentProfile = lastProfile;
+            document.getElementById("profileSelect").value = currentProfile;
+            loadWords();
+            updateProgress();
+            alert(`✅ Welcome back, ${currentProfile}`);
+        } else {
+            alert("❌ Incorrect PIN! Access denied.");
+            document.getElementById("profileSelect").value = "";
+        }
+    }
+};
+</script>
