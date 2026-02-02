@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spelling Practice</title>
+<style>
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f7f9fc;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+.container {
+    max-width: 420px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+h1 {
+    text-align: center;
+    font-size: 22px;
+    margin-bottom: 20px;
+}
+input, select {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+}
+button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    margin-top: 8px;
+    background: #4f8cff;
+    color: #fff;
+    cursor: pointer;
+}
+button.secondary { background: #e0e6f0; color: #333; }
+button.small { background: #ccc; color: #333; margin-top: 6px; }
+.feedback { text-align: center; font-size: 18px; margin-top: 10px; font-weight: 600; }
+.correct { color: green; }
+.incorrect { color: red; }
+.answer { text-align: center; margin-top: 8px; }
+.hidden { display: none; }
+.word-list { margin-top: 15px; padding: 10px; background: #f1f4fa; border-radius: 8px; font-size: 15px; line-height: 1.6; }
+.progress-container { margin-bottom: 10px; }
+.progress-bar-bg { width: 100%; height: 10px; background: #e6e6e6; border-radius: 5px; overflow: hidden; }
+.progress-bar-fill { height: 100%; width: 0%; background: #2ecc71; transition: width 0.4s ease; }
+.progress-text { font-size: 13px; text-align: center; margin-top: 4px; color: #555; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Company Name -->
+    <h1 style="text-align:center; font-size:24px; margin-bottom:10px;">
+        <span style="color:#0b3d91; font-weight:bold;">PTE</span>
+        <span style="color:#d4af37; font-weight:bold;">Guide.com</span>
+    </h1>
+
+    <!-- App Title -->
+    <h1 style="text-align:center; font-size:22px; margin-bottom:20px;">Spelling Practice</h1>
+
+    <!-- Profile Selection -->
+    <select id="profileSelect" onchange="switchProfile()">
+        <option value="">Select Profile</option>
+        <option value="Zwala">Zwala</option>
+        <option value="Ganga">Ganga</option>
+        <option value="Poonam">Poonam</option>
+    </select>
+
+    <!-- Add Word -->
+    <input type="text" id="newWord" placeholder="Add a new word">
+    <button onclick="addWord()">Add Word</button>
+
+    <hr style="margin:20px 0;">
+
+    <!-- Practice -->
+    <button class="secondary" onclick="startPractice()">Start Practice</button>
+    <button class="secondary" onclick="toggleWordList()">View Listed Words</button>
+
+    <div id="practiceArea" class="hidden">
+
+        <!-- Progress -->
+        <div class="progress-container">
+            <div class="progress-bar-bg">
+                <div id="progressFill" class="progress-bar-fill"></div>
+            </div>
+            <div id="progressText" class="progress-text">0 / 0</div>
+        </div>
+
+        <input type="text" id="userInput" placeholder="Type the spelling">
+        <button onclick="checkSpelling()">Submit</button>
+
+        <div id="feedback" class="feedback"></div>
+        <button id="showBtn" class="small hidden" onclick="showAnswer()">Show</button>
+        <div id="answer" class="answer"></div>
+        <button class="secondary" onclick="nextWord()">Next</button>
+    </div>
+
+    <div id="wordListBox" class="word-list hidden"></div>
+</div>
+
+<script>
+let profiles = ["Zwala", "Ganga", "Poonam"];
+let currentProfile = "";
+let words = [];
+let sessionWords = [];
+let currentIndex = 0;
+let currentWord = "";
+let practicedThisSession = new Set();
+
+// PINs for each profile
+const profilePINs = {
+    "Zwala": "321",
+    "Ganga": "654",
+    "Poonam": "987"
+};
+
+// Load words for current profile
+function loadWords() {
+    if (!currentProfile) return;
+    words = JSON.parse(localStorage.getItem("words_" + currentProfile)) || [];
+}
+
+// Save words for current profile
+function saveWords() {
+    if (!currentProfile) return;
+    localStorage.setItem("words_" + currentProfile, JSON.stringify(words));
+}
+
+// Profile switch with PIN verification
+function switchProfile() {
+    const selected = document.getElementById("profileSelect").value;
+    if (!selected) return;
+
+    const enteredPIN = prompt(`Enter PIN for ${selected}:`);
+    if (enteredPIN === profilePINs[selected]) {
+        currentProfile = selected;
+        loadWords();
+        sessionWords = [];
+        currentIndex = 0;
+        practicedThisSession.clear();
+        document.getElementById("practiceArea").classList.add("hidden");
+        document.getElementById("wordListBox").classList.add("hidden");
+        updateProgress();
+        alert(`✅ Access granted for ${currentProfile}`);
+    } else {
+        alert("❌ Incorrect PIN! Access denied.");
+        document.getElementById("profileSelect").value = ""; // reset selection
+        currentProfile = "";
+        words = [];
+        sessionWords = [];
+    }
+}
+
+// Add new word
+function addWord() {
+    if (!currentProfile) {
+        alert("Please select a profile first.");
+        return;
+    }
+    const input = document.getElementById("newWord");
+    const word = input.value.trim().toLowerCase();
+    if (word && !words.includes(word)) {
+        words.push(word);
+        saveWords();
+    }
+    input.value = "";
+    updateWordListDisplay();
+}
+
+// Start practice session
+function startPractice() {
+    if (!currentProfile) {
+        alert("Please select a profile first.");
+        return;
+    }
+    if (words.length === 0) {
+        alert("Please add some words first.");
+        return;
+    }
+    sessionWords = [...words].sort(() => Math.random() - 0.5);
+    currentIndex = 0;
+    practicedThisSession.clear();
+
+    document.getElementById("practiceArea").classList.remove("hidden");
+    speakCurrentWord();
+}
+
+// Speak current word
+function speakCurrentWord() {
+    currentWord = sessionWords[currentIndex];
+    const utterance = new SpeechSynthesisUtterance(currentWord);
+    utterance.lang = "en-US";
+    speechSynthesis.speak(utterance);
+
+    document.getElementById("userInput").value = "";
+    document.getElementById("feedback").textContent = "";
+    document.getElementById("feedback").className = "feedback";
+    document.getElementById("answer").textContent = "";
+    document.getElementById("showBtn").classList.add("hidden");
+
+    practicedThisSession.add(currentWord);
+    updateProgress();
+}
+
+// Move to next word
+function nextWord() {
+    if (currentIndex < sessionWords.length - 1) {
+        currentIndex++;
+        speakCurrentWord();
+    } else {
+        alert("🎉 You have practiced all listed words!");
+    }
+}
+
+// Update progress bar
+function updateProgress() {
+    const practicedCount = practicedThisSession.size;
+    const total = words.length;
+    const percent = total === 0 ? 0 : (practicedCount / total) * 100;
+
+    document.getElementById("progressFill").style.width = percent + "%";
+    document.getElementById("progressText").textContent =
+        practicedCount + " / " + total;
+}
+
+// Check spelling
+function checkSpelling() {
+    const input = document.getElementById("userInput").value.trim().toLowerCase();
+    const feedback = document.getElementById("feedback");
+
+    if (input === currentWord) {
+        feedback.textContent = "Correct";
+        feedback.classList.add("correct");
+    } else {
+        feedback.textContent = "Incorrect";
+        feedback.classList.add("incorrect");
+        document.getElementById("showBtn").classList.remove("hidden");
+    }
+}
+
+// Show correct spelling
+function showAnswer() {
+    document.getElementById("answer").textContent =
+        "Correct spelling: " + currentWord;
+}
+
+// Toggle word list display
+function toggleWordList() {
+    const box = document.getElementById("wordListBox");
+
+    if (box.classList.contains("hidden")) {
+        updateWordListDisplay();
+        box.classList.remove("hidden");
+    } else {
+        box.classList.add("hidden");
+    }
+}
+
+// Update word list content
+function updateWordListDisplay() {
+    const box = document.getElementById("wordListBox");
+    box.innerHTML = words.length
+        ? "<strong>Listed Words for " + currentProfile + ":</strong><br>" + words.join(", ")
+        : "No words added yet.";
+}
+</script>
+
+</body>
+</html>
